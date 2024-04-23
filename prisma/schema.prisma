@@ -1,0 +1,355 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_DIRECT_URL")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum FormatOfWork {
+  OFFLINE
+  ONLINE
+  BOTH
+}
+
+enum EventFormat {
+  OFFLINE
+  ONLINE
+}
+
+enum EventPriceFormat {
+  FREE
+  FIXED_PRICE
+  MIN_PRICE
+}
+
+enum OwnershipType {
+  PRIVATE
+  GOVERNMENT
+}
+
+enum WeekDay {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+enum NavigationUrl {
+  FACEBOOK
+  INSTAGRAM
+  APPLICATION
+}
+
+model Specialist {
+  id                    String           @id @default(uuid()) @db.Uuid
+  createdAt             DateTime         @default(now())
+  firstName             String           @db.VarChar(64)
+  lastName              String           @db.VarChar(64)
+  surname               String?          @db.VarChar(64)
+  specializations       Specialization[]
+  specializationMethods Method[]
+  gender                Gender?
+  yearsOfExperience     Int?             @db.SmallInt
+  formatOfWork          FormatOfWork?
+  addresses             Address[]
+  workTime              WorkTime[]
+  isFreeReception       Boolean?
+  description           String?          @db.Text
+  phone                 String?          @db.VarChar(15)
+  email                 String?          @db.VarChar(320)
+  website               String?          @db.Text
+  isActive              Boolean          @default(false)
+  instagram             String?          @db.Text
+  facebook              String?          @db.Text
+  youtube               String?          @db.Text
+  linkedin              String?          @db.Text
+  tiktok                String?          @db.Text
+  viber                 String?          @db.Text
+  telegram              String?          @db.Text
+  searchEntry           SearchEntry?
+  supportFocuses        SupportFocus[]
+  clientsWorkingWith    ClientCategory[] @relation(name: "SpecialistToClientCategoryWorkingWith")
+  clientsNotWorkingWith ClientCategory[] @relation(name: "SpecialistToClientCategoryNotWorkingWith")
+
+  @@map("specialist")
+}
+
+model Organization {
+  id                    String             @id @default(uuid()) @db.Uuid
+  createdAt             DateTime           @default(now())
+  name                  String             @db.VarChar(128)
+  type                  OrganizationType[]
+  yearsOnMarket         Int?               @db.SmallInt
+  formatOfWork          FormatOfWork?
+  addresses             Address[]
+  ownershipType         OwnershipType?
+  isInclusiveSpace      Boolean?
+  // this is light version of specialists relation to organization
+  expertSpecializations Specialization[]
+  workTime              WorkTime[]
+  isFreeReception       Boolean?
+  description           String?            @db.Text
+  phone                 String?            @db.VarChar(15)
+  email                 String?            @db.VarChar(320)
+  website               String?            @db.Text
+  isActive              Boolean            @default(false)
+  instagram             String?            @db.Text
+  facebook              String?            @db.Text
+  youtube               String?            @db.Text
+  linkedin              String?            @db.Text
+  tiktok                String?            @db.Text
+  viber                 String?            @db.Text
+  telegram              String?            @db.Text
+  searchEntry           SearchEntry?
+  supportFocuses        SupportFocus[]
+  clientsWorkingWith    ClientCategory[]   @relation(name: "OrganizationToClientCategoryWorkingWith")
+  clientsNotWorkingWith ClientCategory[]   @relation(name: "OrganizationToClientCategoryNotWorkingWith")
+
+  @@map("organization")
+}
+
+// Technical(not real instance) table to contain info about type of activities
+// , subset of requests of activity type and specialists/organizations it belongs to
+model SupportFocus {
+  id             String        @id @default(uuid()) @db.Uuid
+  createdAt      DateTime      @default(now())
+  specialist     Specialist?   @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  specialistId   String?       @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String?       @db.Uuid
+  price          Int?          @db.Integer
+  activityType   ActivityType  @relation(fields: [activityTypeId], references: [id], onDelete: Cascade)
+  activityTypeId String        @db.Uuid
+  requests       Request[]
+
+  @@map("support_focus")
+}
+
+model SearchEntry {
+  id             String        @id @default(uuid()) @db.Uuid
+  sortString     String // sort string contains Full Name if record is for specialist and Clinic name if record is for organization
+  specialist     Specialist?   @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  specialistId   String?       @unique @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String?       @unique @db.Uuid
+
+  @@map("search_entry")
+}
+
+model Specialization {
+  id           String         @id @default(uuid()) @db.Uuid
+  createdAt    DateTime       @default(now())
+  name         String         @unique @db.VarChar(128)
+  specialists  Specialist[]
+  Organization Organization[]
+  methods      Method[]
+
+  @@map("specialization")
+}
+
+model District {
+  id        String    @id @default(uuid()) @db.Uuid
+  createdAt DateTime  @default(now())
+  name      String    @unique @db.VarChar(64)
+  Address   Address[]
+
+  @@map("district")
+}
+
+model OrganizationType {
+  id            String         @id @default(uuid()) @db.Uuid
+  createdAt     DateTime       @default(now())
+  name          String         @unique @db.VarChar(64)
+  organizations Organization[]
+
+  @@map("organization_type")
+}
+
+model ActivityType {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdAt   DateTime @default(now())
+  type        String   @unique @db.VarChar(64)
+  title       String   @db.VarChar(128)
+  description String   @db.VarChar(255)
+  imagePath   String   @db.VarChar(255)
+  isActive    Boolean  @default(false)
+  priority    Int      @default(0) @db.SmallInt
+
+  supportFocuses SupportFocus[]
+  requests       Request[]
+
+  @@map("activity_type")
+}
+
+model Request {
+  id             String         @id @default(uuid()) @db.Uuid
+  simpleId       Int            @default(autoincrement())
+  createdAt      DateTime       @default(now())
+  name           String         @unique
+  supportFocuses SupportFocus[]
+  activityTypes  ActivityType[]
+
+  @@map("request")
+}
+
+model Address {
+  id            String         @id @default(uuid()) @db.Uuid
+  createdAt     DateTime       @default(now())
+  nameOfClinic  String?        @db.VarChar(255)
+  fullAddress   String         @db.VarChar(128) // street,building number,floor,room number
+  district      District       @relation(fields: [districtId], references: [id])
+  districtId    String         @db.Uuid
+  specialists   Specialist[]
+  organizations Organization[]
+  isPrimary     Boolean        @default(false)
+  longitude     Float          @default(0) @db.DoublePrecision
+  latitude      Float          @default(0) @db.DoublePrecision
+
+  @@map("address")
+}
+
+model Feedback {
+  id         String   @id @default(uuid()) @db.Uuid
+  createdAt  DateTime @default(now())
+  name       String   @db.VarChar(128)
+  phone      String   @db.VarChar(13)
+  email      String?  @db.VarChar(320)
+  callMe     Boolean
+  message    String   @db.VarChar(320)
+  adminNotes String?  @db.VarChar(350)
+  isRead     Boolean  @default(false)
+
+  @@map("feedback")
+}
+
+model Event {
+  id             String            @id @default(uuid()) @db.Uuid
+  createdAt      DateTime          @default(now())
+  title          String            @db.VarChar(128)
+  organizerName  String            @db.VarChar(128)
+  notes          String?           @db.VarChar(350)
+  address        String?           @db.VarChar(128)
+  locationLink   String?           @db.Text
+  price          Int?              @db.Integer
+  isActive       Boolean           @default(false)
+  additionalLink EventLink?        @relation(fields: [linkId], references: [id])
+  linkId         String?           @db.Uuid
+  eventDate      DateTime?
+  format         EventFormat?
+  priceType      EventPriceFormat?
+  tags           EventTag[]
+
+  @@map("event")
+}
+
+model EventLink {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  label     String   @db.VarChar(30)
+  link      String   @db.Text
+  events    Event[]
+
+  @@unique([label, link])
+  @@map("event_link")
+}
+
+model EventTag {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  name      String   @unique @db.VarChar(64)
+  events    Event[]
+
+  @@map("event_tag")
+}
+
+model Faq {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(false)
+  question  String
+  answer    String   @default("")
+  priority  Int?     @db.SmallInt
+
+  @@map("faq")
+}
+
+model Method {
+  id               String         @id @default(uuid()) @db.Uuid
+  simpleId         Int            @default(autoincrement())
+  createdAt        DateTime       @default(now())
+  title            String         @unique @db.VarChar(128)
+  description      String?        @db.Text
+  specializationId String         @db.Uuid
+  specialization   Specialization @relation(fields: [specializationId], references: [id])
+  specialists      Specialist[]
+
+  @@map("method")
+}
+
+model ClientCategory {
+  id                          String         @id @default(uuid()) @db.Uuid
+  createdAt                   DateTime       @default(now())
+  name                        String         @unique @db.VarChar(64)
+  specialistsWorkingWith      Specialist[]   @relation(name: "SpecialistToClientCategoryWorkingWith")
+  specialistsNotWorkingWith   Specialist[]   @relation(name: "SpecialistToClientCategoryNotWorkingWith")
+  organizationsWorkingWith    Organization[] @relation(name: "OrganizationToClientCategoryWorkingWith")
+  organizationsNotWorkingWith Organization[] @relation(name: "OrganizationToClientCategoryNotWorkingWith")
+
+  @@map("client_category")
+}
+
+model WorkTime {
+  id            String         @id @default(uuid()) @db.Uuid
+  createdAt     DateTime       @default(now())
+  time          String         @db.VarChar(13)
+  isDayOff      Boolean        @default(false)
+  weekDay       WeekDay
+  specialists   Specialist[]
+  organizations Organization[]
+
+  @@unique([weekDay, time, isDayOff])
+  @@map("work_time")
+}
+
+model Navigation {
+  id        String        @id @default(uuid()) @db.Uuid
+  createdAt DateTime      @default(now())
+  title     NavigationUrl @unique
+  href      String        @db.Text
+
+  @@map("social_media")
+}
+
+model DonationDetails {
+  id                   String  @id @default(uuid()) @db.Uuid
+  isDonationEnabled    Boolean @default(true)
+  title                String  @unique @db.VarChar(50)
+  subtitle             String  @db.VarChar(50)
+  isSubtitleEnabled    Boolean @default(true)
+  paypalLink           String  @db.Text
+  isPayPalLinkEnabled  Boolean @default(true)
+  privatLink           String  @db.Text
+  isPrivatLinkEnabled  Boolean @default(true)
+  isBankDetailsEnabled Boolean @default(true)
+  enterpriceName       String  @db.VarChar(128) // Назва підприємства
+  enterpriseRegisterId Int     @db.Integer // ЄДРПОУ
+  paymentPurpose       String  @db.VarChar(50) // Призначення платежу
+  iban                 String  @db.VarChar(50) // IBAN
+  isQREnabled          Boolean @default(true)
+  qrLink               String  @db.Text // посилання, яке буде відображене QR-кодом
+
+  @@map("donation_details")
+}
